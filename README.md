@@ -2,25 +2,126 @@
 
 
 ## AIM
-Write the experiment AIM.
+To develop a Python program for SARSA Algorithm
 
 ## PROBLEM STATEMENT
-Explain the problem statement.
+The objective is to train an optimal control policy in an unknown discrete Markov Decision Process (MDP) environment using model-free reinforcement learning, where an agent interacts with the environment step-by-step to maximize cumulative discounted returns. Because the underlying dynamics are initially unknown, the agent must balance exploration and exploitation using an $\epsilon$-greedy strategy combined with decaying learning rates ($\alpha$) and exploration rates ($\epsilon$) to iteratively learn the true action-value function $Q^*(s, a)$ via the SARSA algorithm.
 
 ## SARSA LEARNING ALGORITHM
-Include the steps involved in the SARSA Learning algorithm
+1. **Initialization:**
+   - Initialize the action-value table $Q(s, a)$ with zeros for all state-action pairs.
+   - Allocate tracking arrays ($Q\_track$ and $pi\_track$) to record convergence over training episodes.
+
+2. **Decay Schedules:**
+   - Set up linear decay schedules for both the learning rate ($\alpha$) and the exploration rate ($\epsilon$) to ensure stable convergence over time.
+
+3. **Episode Execution:**
+   - **Reset** the environment to get the starting state $s$.
+   - **Select** an initial action $a$ using an $\epsilon$-greedy policy derived from the current $Q$-table.
+
+4. **Step-by-Step Updates (Inside Each Episode):**
+   - Execute action $a$ in the environment to observe the next state ($s'$), reward ($r$), and termination status (`done`).
+   - Select the next action ($a'$) from state $s'$ using the same $\epsilon$-greedy policy.
+   - **Update the $Q$-value** using the SARSA update rule:
+     $$Q(s, a) \leftarrow Q(s, a) + \alpha \left[ r + \gamma Q(s', a') \cdot (1 - \text{done}) - Q(s, a) \right]$$
+   - Transition to the next state-action pair: $s \leftarrow s'$ and $a \leftarrow a'$.
+
+5. **Tracking & Outputs:**
+   - Save the history of the $Q$-table and extract the greedy policy ($\pi$) after each episode.
+   - Return the final optimal $Q$-function, state-value function $V(s) = \max_a Q(s, a)$, final greedy policy, and training history.
 
 ## SARSA LEARNING FUNCTION
-### Name:
-### Register Number:
+### Name: Kiran Kumar CS
+### Register Number: 212224240076
 
-Include the SARSA Learning function
+```
+def sarsa(env,
+          gamma=1.0,
+          init_alpha=0.5,
+          min_alpha=0.01,
+          alpha_decay_ratio=0.5,
+          init_epsilon=1.0,
+          min_epsilon=0.1,
+          epsilon_decay_ratio=0.9,
+          n_episodes=3000):
+    
+    nS, nA = env.observation_space.n, env.action_space.n
+    pi_track = []
+    Q = np.zeros((nS, nA), dtype=np.float64)
+    Q_track = np.zeros((n_episodes, nS, nA), dtype=np.float64)
+
+    # Helper function to generate epsilon-greedy policy
+    def select_action(state, epsilon):
+        if np.random.random() < epsilon:
+            return env.action_space.sample()
+        else:
+            return np.argmax(Q[state])
+
+    # Compute decay schedules
+    alphas = np.linspace(init_alpha, min_alpha, int(n_episodes * alpha_decay_ratio))
+    alphas = np.append(alphas, np.full(n_episodes - len(alphas), min_alpha))
+
+    epsilons = np.linspace(init_epsilon, min_epsilon, int(n_episodes * epsilon_decay_ratio))
+    epsilons = np.append(epsilons, np.full(n_episodes - len(epsilons), min_epsilon))
+
+    for e in range(n_episodes):
+        alpha = alphas[e]
+        epsilon = epsilons[e]
+        
+        # Handle environment reset compatibility
+        reset_res = env.reset()
+        state = reset_res[0] if isinstance(reset_res, tuple) else reset_res
+        
+        action = select_action(state, epsilon)
+        
+        done = False
+        while not done:
+            # Handle env.step() returning either 4 or 5 values
+            step_res = env.step(action)
+            if len(step_res) == 5:
+                next_state, reward, terminated, truncated, _ = step_res
+                done = terminated or truncated
+            else:
+                next_state, reward, done, _ = step_res
+            
+            next_action = select_action(next_state, epsilon)
+            
+            # SARSA update rule
+            td_target = reward + gamma * Q[next_state][next_action] * (not done)
+            td_error = td_target - Q[state][action]
+            Q[state][action] += alpha * td_error
+            
+            state, action = next_state, next_action
+            
+        Q_track[e] = Q
+        
+        # Derive greedy policy for tracking
+        current_policy = np.argmax(Q, axis=1)
+        pi_track.append(current_policy)
+
+    # Final derived policy and state-value function
+    pi = np.argmax(Q, axis=1)
+    V = np.max(Q, axis=1)
+    
+    return Q, V, pi, Q_track, pi_track
+```
 
 ## OUTPUT:
-Mention the optimal policy, optimal value function , success rate for the optimal policy.
+### Alpha and Epsilon schedules
+![alt text](./image.png)
 
-Include plot comparing the state value functions of Monte Carlo method and SARSA learning.
+### Optimal value functions and policy
+![alt text](.image-1.png)
 
+### First-visit Monte-Carlo Control
+![alt text](./image-2.png)
+
+### SARSA-Learning
+![alt text](./image-3.png)
+
+### First-visit Monte-Carlo vs SARSA-learning
+![alt text](./image-4.png)
+![alt text](./image-5.png)
 ## RESULT:
 
-Write your result here
+Thus, the Python program for SARSA implementation has been successfully executed.
